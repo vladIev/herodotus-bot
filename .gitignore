@@ -1,3 +1,4 @@
 token
 .venv
 herodot.log
+__pycache__
