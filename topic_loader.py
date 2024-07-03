@@ -59,7 +59,8 @@ class TopicLoader:
         choices = TopicLoader._splitChoices(choices_text, letters)
         return question_text, choices
                 
-#geograpy_questions = TopicLoader.load("questions/geography.csv")
+#geograpy_questions = TopicLoader.load("questions/exam_2023.csv", 4)
+#geograpy_questions = TopicLoader.load("questions/exam_2024_1.csv", 5)
 #traditions_questions = TopicLoader.load("questions/traditions.csv")
 #politic_questions = TopicLoader.load("questions/politic.csv")
 #culture_questions = TopicLoader.load("questions/culture.csv")

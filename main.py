@@ -14,11 +14,12 @@ def get_token() -> str:
 
 
 def main() -> None:
-    # Вставьте сюда свой токен
     questions = QuestionsBase({Topics.GEOGRAPHY: "questions/geography.csv",
                                Topics.TRADITIONS: "questions/traditions.csv",
                                Topics.POLITICS: "questions/politic.csv",
-                               Topics.CULTURE: "questions/culture.csv"})
+                               Topics.CULTURE: "questions/culture.csv",
+                               Topics.EXAM_2023: "questions/exam_2023.csv",
+                               Topics.EXAM_2024_1: "questions/exam_2024_1.csv"})
     token = get_token()
     bot = TelegramBot(token, questions)
     bot.run()

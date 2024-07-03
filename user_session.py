@@ -1,12 +1,8 @@
 import random
-from enum import Enum
 from copy import deepcopy
 from question import Question
 from questions_base import QuestionsGenerator, Topics
 
-class Mode(Enum):
-    PRACTICE=0
-    EXAM=1
 
 class Statistics:
     def __init__(self):
@@ -24,14 +20,14 @@ class Statistics:
     def reset(self):
         self.questions_asked = 0
         self.correct_answers = 0
-        self.mistakes = {Topics.GEOGRAPHY: [], Topics.TRADITIONS: [], Topics.CULTURE: [], Topics.POLITICS:[]}
+        self.mistakes = {topic:[] for topic in Topics}
     
 # Класс для хранения сессии пользователя
 class UserSession:
     def __init__(self, user_id:int, questions_generator: QuestionsGenerator):
         self.user_id = user_id
         self.questions_generator = questions_generator
-        self.mode:Mode = None
+        self.topic:Topics = None
         self.last_question:Question = None
         self.stats = Statistics()
 
@@ -44,15 +40,20 @@ class UserSession:
 
     def work_on_mistakes(self):
         self.questions = self.stats.mistakes
-        self.stats.reset_mistakes()
+        self.stats.reset()
         self.questions_generator = QuestionsGenerator(self.questions)
 
     def get_next_question(self, topic=None):
+        if not topic:
+            topic = self.topic
         question = self.questions_generator.get_next_question(topic)
-        if len(question.choices) > 2:
+        if question and len(question.choices) > 2:
             question = self._shuffled_answers(question)
         self.last_question = question
         return question
+    
+    def has_mistakes(self)->bool:
+        return any(self.stats.mistakes.values())
     
     @staticmethod
     def _shuffled_answers(question:Question):

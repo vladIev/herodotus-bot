@@ -1,5 +1,7 @@
-from user_session import UserSession, Mode
-from questions_base import QuestionsBase, QuestionsGenerator
+from enum import Enum
+
+from user_session import UserSession
+from questions_base import Topics, QuestionsBase, QuestionsGenerator
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -19,6 +21,11 @@ def get_restart_message(session:UserSession):
     Начинаем заново!
     """
 
+class Mode(Enum):
+    PRACTICE=0
+    EXAM1=1
+    EXAM2=2
+
 class TelegramBot:
     def __init__(self, token: str, questions: QuestionsBase):
         self.application = Application.builder().token(token).build()
@@ -31,21 +38,28 @@ class TelegramBot:
 
         keyboard = [
             [InlineKeyboardButton("Практика", callback_data=f"mode_{Mode.PRACTICE}")],
-            #[InlineKeyboardButton("Экзамен", callback_data=Mode.EXAM)],
+            [InlineKeyboardButton("Экзамен 2023", callback_data=f"mode_{Mode.EXAM1}")],
+            [InlineKeyboardButton("Экзамен зима 2024", callback_data=f"mode_{Mode.EXAM2}")], 
         ]
 
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
-            'Привет! Выберите режим работы:', reply_markup=reply_markup
+            'Этот бот помогает подготовиться к экзамену на знание культуры и истории Кипра.'
+            '\nДоступные команды: \n\t/start - сбросить весь прогресс и начать заново'
+            '\n\t/stats - просмотр текущей стастистика'
+            '\n\t/skip - пропустить текущий ворос и задать новый'
+            '\n\nВыберите режим работы:', reply_markup=reply_markup
         )
 
     async def mode_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         await query.answer()
 
+        mode_to_topic = {"Mode.PRACTICE": None, "Mode.EXAM1":Topics.EXAM_2023, "Mode.EXAM2":Topics.EXAM_2024_1}
         user_id = query.from_user.id
-        self.user_sessions[user_id].mode = query.data.split('_')[1]
+        mode = query.data.split('_')[1]
+        self.user_sessions[user_id].topic = mode_to_topic[mode]
 
         await self.ask_next_question(update, context, user_id)
 
@@ -54,16 +68,21 @@ class TelegramBot:
         session = self.user_sessions[user_id]
         question = session.get_next_question()
         if question is None:
-            if session.stats.mistakes:
+            if session.has_mistakes():
                 await context.bot.send_message(chat_id=user_id, text=get_work_on_erros_mesage(session))
                 session.work_on_mistakes()
-            else:
-                await context.bot.send_message(chat_id=user_id, text=get_restart_message(session))
-                self.user_sessions[user_id] = UserSession(user_id, QuestionsGenerator(self.questions.questions))
-                session = self.user_sessions[user_id]
+                question = session.get_next_question()
 
-        question = session.get_next_question()
-        await self.send_question(question, user_id, context)
+        if question is None:
+            await context.bot.send_message(chat_id=user_id, text=get_restart_message(session))
+            self.user_sessions[user_id] = UserSession(user_id, QuestionsGenerator(self.questions.questions))
+            session = self.user_sessions[user_id]
+            question = session.get_next_question()
+
+        if question:
+            await self.send_question(question, user_id, context)
+        else:
+            await self.start(update, context)
 
 
     async def send_question(self, question, user_id, context):
@@ -103,11 +122,17 @@ class TelegramBot:
         session = self.user_sessions[user_id]
         await context.bot.send_message(chat_id=user_id, text=f"Ваша текущая статисткика:\n{session.stats.get_stats_row()}")
 
+    async def skip(self, update: Update, context: ContextTypes.DEFAULT_TYPE)->None:
+        user_id = update.message.from_user.id
+        await self.ask_next_question(update, context, user_id)
+
 
     def run(self) -> None:
         self.application.add_handler(CommandHandler('start', self.start))
-        self.application.add_handler(CommandHandler('stat', self.user_stats))
+        self.application.add_handler(CommandHandler('stats', self.user_stats))
+        self.application.add_handler(CommandHandler('skip', self.skip))
         self.application.add_handler(CallbackQueryHandler(self.mode_selection, pattern='mode_'))
         self.application.add_handler(CallbackQueryHandler(self.handle_answer, pattern='answer_'))
+
 
         self.application.run_polling()

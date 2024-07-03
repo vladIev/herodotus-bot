@@ -10,8 +10,9 @@ class Topics(Enum):
     TRADITIONS=1
     POLITICS=2
     CULTURE=3
+    EXAM_2023=4
+    EXAM_2024_1=5
 
-topics =  [Topics.GEOGRAPHY, Topics.CULTURE, Topics.POLITICS, Topics.TRADITIONS]
 
 class QuestionsBase:
     def __init__(self, questions_path):
@@ -32,7 +33,7 @@ class QuestionsGenerator:
     def __init__(self, questions):
         self.questions = questions
         self.questions_order = self._shuffle_questions(questions)
-        self.question_generators = {topic: self._get_question(topic) for topic in topics}
+        self.question_generators = {topic: self._get_question(topic) for topic in Topics}
 
     @staticmethod
     def _shuffle_questions(questions_base):
